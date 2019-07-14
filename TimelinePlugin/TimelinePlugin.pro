@@ -17,7 +17,7 @@ target.path = $$[QT_INSTALL_PLUGINS]/designer
 INSTALLS    += target
 
 
-Debug:DESTDIR = $$PWD/../ShowPlugin/bin/debug
-Release:DESTDIR = $$PWD/../ShowPlugin/bin/release
+Debug:DESTDIR = $$PWD/../bin/debug
+Release:DESTDIR = $$PWD/../bin/release
 
 include(timelineplugin.pri)
