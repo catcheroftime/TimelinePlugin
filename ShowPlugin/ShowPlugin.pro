@@ -34,8 +34,11 @@ LIBS += -L$$DESTDIR
 LIBS += -lTimelineplugin
 
 SOURCES += main.cpp\
-        mainwindow.cpp
+        mainwindow.cpp \
+    addtimecell.cpp
 
-HEADERS  += mainwindow.h
+HEADERS  += mainwindow.h \
+    addtimecell.h
 
-FORMS    += mainwindow.ui
+FORMS    += mainwindow.ui \
+    addtimecell.ui

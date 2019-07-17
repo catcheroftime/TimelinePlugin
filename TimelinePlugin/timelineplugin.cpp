@@ -6,8 +6,10 @@
 #include <QFont>
 #include <QPainter>
 #include <QMessageBox>
+#include <QDebug>
 
 #define TIMECELL_ACCOUNT 30
+#define MIN_DISTANCE 2
 
 TimelinePlugin::TimelinePlugin(QWidget *parent) :
     QWidget(parent),
@@ -17,10 +19,13 @@ TimelinePlugin::TimelinePlugin(QWidget *parent) :
   , m_pCurrentTimeCell(nullptr)
   , m_direc(StretchDirction::NONE)
   , m_bmove(false)
+  , m_createWidgetColor("rgb(255,0,0)")
 {
     ui->setupUi(this);
     this->setWindowFlags(Qt::FramelessWindowHint);
     m_pTimeSelector->hide();
+
+    ui->rb_red->setChecked(true);
 
 
     ui->widget_timeaxis->setStyleSheet("background-color:qlineargradient(x1:0, y1:0, x2:0, y2:1,stop:0 rgb(120, 120, 120), stop:1 rgb(140, 140, 140));");
@@ -34,6 +39,59 @@ TimelinePlugin::~TimelinePlugin()
     delete m_pTimeSelector;
     deleteTimecell();
     delete ui;
+}
+
+QList<TimelinePlugin::TimecellDetail> TimelinePlugin::getTimeCell()
+{
+    QList<TimelinePlugin::TimecellDetail> result;
+    int count = m_listTimeCell.count();
+    for (int i=0; i<count; ++i) {
+        TimelinePlugin::TimecellDetail info;
+        QWidget *timecell = m_listTimeCell.at(i);
+
+        QTime start_time, end_time;
+        this->getDateTime(timecell->pos().x(),timecell->width(), start_time,end_time);
+
+        info.start_time = start_time;
+        info.end_time = end_time;
+        info.color = m_mapWidgetInfos[timecell].color;
+
+        result.append(info);
+    }
+    return result;
+}
+
+void TimelinePlugin::setTimeCell(const TimelinePlugin::TimecellDetail &detail)
+{
+    QTime starttime = detail.start_time;
+    QTime endtime = detail.end_time;
+
+    int width,start_position;
+    if(!getWidgetStartpositionAndWidth(starttime, endtime , width,start_position))
+        return;
+
+    WidgetInfo range;
+    range.color = detail.color;
+    bool invalid = getCanMoveRange(NULL, start_position, range);
+
+    if (invalid && range.maxlength >= width + start_position && start_position >= range.minlength) {
+        QWidget *timecell = new QWidget(ui->widget_timeaxis);
+        timecell->resize(width, this->height());
+        timecell->move(start_position, 0);
+        timecell->show();
+        QString background = QString("background-color:") +detail.color;
+        timecell->setStyleSheet(background);
+        timecell->installEventFilter(this);
+        timecell->setMouseTracking(true);
+
+
+        m_listTimeCell.append(timecell);
+        m_mapWidgetInfos[timecell] = range;
+    } else {
+        QString title = QString("新添加的 ") + starttime.toString("hh:mm") +QString("-") + endtime.toString("hh:mm") + QString(" 时间段和已有的时间段存在冲突！！");
+        QMessageBox::information(this, "错误", title);
+        return;
+    }
 }
 
 void TimelinePlugin::deleteTimecell()
@@ -76,9 +134,12 @@ bool TimelinePlugin::eventFilter(QObject *target, QEvent *event)
                 QWidget *new_timecell = new QWidget(ui->widget_timeaxis);
                 new_timecell->resize(0, this->height());
                 new_timecell->show();
-                new_timecell->setStyleSheet("background-color:rgb(93,128,248)");
+                QString background = QString("background-color:") +m_createWidgetColor;
+                new_timecell->setStyleSheet(background);
                 new_timecell->installEventFilter(this);
                 new_timecell->setMouseTracking(true);
+
+                info.color = m_createWidgetColor;
 
                 m_pCurrentWidget = new_timecell;
                 m_listTimeCell.append(new_timecell);
@@ -119,7 +180,7 @@ bool TimelinePlugin::eventFilter(QObject *target, QEvent *event)
                 }
 
                 // 如果m_pCurrentWidget的宽度过小， 认为生成的timecell无效， 删除new的widget, 清除记录
-                if (m_pCurrentWidget && m_pCurrentWidget->width() <=5) {
+                if (m_pCurrentWidget && m_pCurrentWidget->width() <= MIN_DISTANCE) {
                     delete  m_pCurrentWidget;
                     m_listTimeCell.removeAll(m_pCurrentWidget);
                     m_mapWidgetInfos.remove(m_pCurrentWidget);
@@ -145,16 +206,16 @@ bool TimelinePlugin::eventFilter(QObject *target, QEvent *event)
                 m_timecell_pressmouseGlobalX = mouse_press->globalX();
 
                 // 更新选中的timecell的信息
-                WidgetInfo new_info;
+                WidgetInfo new_info = m_mapWidgetInfos.value(object);
                 getCanMoveRange(object, object->pos().x(), new_info);
                 new_info.currentposition = object->pos().x();
                 new_info.width = object->width();
                 m_mapWidgetInfos[object] = new_info;
 
                 // 需要判断是移动timecell。 还是改变timecell宽度
-                if (m_timecell_pressmouseX <= 2 || m_timecell_pressmouseX >= object->width()-2 ) {
+                if (m_timecell_pressmouseX <= MIN_DISTANCE || m_timecell_pressmouseX >= object->width()- MIN_DISTANCE ) {
                     this->setCursor(Qt::SizeHorCursor);
-                    if (m_timecell_pressmouseX <= 2)
+                    if (m_timecell_pressmouseX <= MIN_DISTANCE )
                         m_direc = LEFT;
                     else
                         m_direc = RIGHT;
@@ -164,14 +225,24 @@ bool TimelinePlugin::eventFilter(QObject *target, QEvent *event)
                     m_bmove = true;
                     this->setCursor(Qt::ClosedHandCursor);
                 }
-                showSettingTimeWidget(mouse_press, object);
+                showTimeSelector(mouse_press, object);
 
             } else if (mouse_press->button() == Qt::RightButton) {
-                m_listTimeCell.removeAll(object);
-                m_mapWidgetInfos.remove(object);
-                delete object;
-                object = nullptr;
-                this->setCursor(Qt::ArrowCursor);
+                QTime start_time,end_time;
+                getDateTime(object->pos().x(), object->width(), start_time, end_time);
+                QString text = QString("是否确定删除选中的 ") + start_time.toString("hh:mm") +QString("-") + end_time.toString("hh:mm") + QString(" 时间段？");
+
+                QMessageBox mb(QMessageBox::Question,"删除时间段",text,QMessageBox::Yes | QMessageBox::No,this);
+                mb.setDefaultButton(QMessageBox::Yes);
+                mb.setButtonText(QMessageBox::Yes,QObject::tr("确定"));
+                mb.setButtonText(QMessageBox::No,QObject::tr("取消"));
+                if(mb.exec() == QMessageBox::Yes){
+                    m_listTimeCell.removeAll(object);
+                    m_mapWidgetInfos.remove(object);
+                    delete object;
+                    object = nullptr;
+                    this->setCursor(Qt::ArrowCursor);
+                }
             }
         } else if (event->type() == QMouseEvent::MouseMove) {
             QMouseEvent * mousemove = static_cast<QMouseEvent *> (event);
@@ -184,27 +255,7 @@ bool TimelinePlugin::eventFilter(QObject *target, QEvent *event)
             WidgetInfo origin_info = m_mapWidgetInfos[object];
             int origin_position = origin_info.currentposition;
 
-            if (m_direc == RIGHT) {
-
-                if (origin_info.maxlength >= mouseTothis && mouseTothis >= origin_position) {
-                    int current_widget = mouseTothis - origin_position;
-                    object->resize(current_widget, this->height() );
-                    object->move(origin_position, 0);
-                    showSettingTimeWidget(mousemove, object);
-                }
-                return true;
-            } else if (m_direc == LEFT) {
-                int right_position = origin_position + origin_info.width;
-                if (origin_info.minlength <= mouseTothis && mouseTothis <= right_position) {
-                    int current_widget = right_position - mouseTothis;
-                    object->resize(current_widget, this->height() );
-                    object->move(mouseTothis, 0);
-                    showSettingTimeWidget(mousemove, object);
-                }
-                return true;
-            }
-
-            if (mouse_x <=5 || mouse_x >=object->width()-5) {
+            if (mouse_x <= MIN_DISTANCE || mouse_x >=object->width()-MIN_DISTANCE) {
                 if (!m_bmove)
                     this->setCursor(Qt::SizeHorCursor);
             } else {
@@ -213,11 +264,31 @@ bool TimelinePlugin::eventFilter(QObject *target, QEvent *event)
                     int move_length = mouse_golbalX - m_timecell_pressmouseGlobalX + origin_position;
                     if (origin_info.maxlength >= move_length + object->width() && origin_info.minlength <= move_length) {
                         object->move(move_length, 0);
-                        showSettingTimeWidget(mousemove, object);
+                        showTimeSelector(mousemove, object);
                     }
                 } else {
                     this->setCursor(Qt::OpenHandCursor);
                 }
+            }
+
+            if (m_direc == RIGHT) {
+
+                if (origin_info.maxlength >= mouseTothis && mouseTothis >= origin_position) {
+                    int current_widget = mouseTothis - origin_position;
+                    object->resize(current_widget, this->height() );
+                    object->move(origin_position, 0);
+                    showTimeSelector(mousemove, object);
+                }
+                return true;
+            } else if (m_direc == LEFT) {
+                int right_position = origin_position + origin_info.width;
+                if (origin_info.minlength <= mouseTothis && mouseTothis <= right_position) {
+                    int current_widget = right_position - mouseTothis;
+                    object->resize(current_widget, this->height() );
+                    object->move(mouseTothis, 0);
+                    showTimeSelector(mousemove, object);
+                }
+                return true;
             }
 
         } else if (event->type() == QMouseEvent::MouseButtonRelease) {
@@ -245,7 +316,7 @@ void TimelinePlugin::paintEvent(QPaintEvent *)
     ui->widget_timeaxis->setStyleSheet("background-color:qlineargradient(x1:0, y1:0, x2:0, y2:1,stop:0 rgb(120, 120, 120), stop:1 rgb(140, 140, 140));");
 
     int start_position = ui->widget_graduation->pos().x();
-    int height = ui->widget_graduation->height();
+    int height = ui->widget_graduation->pos().y() + ui->widget_graduation->height()-1;
     int width = ui->widget_timeaxis->width();
 
     QPainter painter(this);
@@ -293,19 +364,22 @@ void TimelinePlugin::slotChangeTimeWidgetLength(QTime start_time, QTime end_time
     }
 }
 
-void TimelinePlugin::showSettingTimeWidget(QMouseEvent *mousemove, QWidget *timecell)
+void TimelinePlugin::showTimeSelector(QMouseEvent *mousemove, QWidget *timecell)
 {
-    m_pTimeSelector->move(mousemove->pos().x() + timecell->pos().x() + this->pos().x(), timecell->pos().y() + this->pos().y()+  timecell->height() );
+    int width = mousemove->pos().x() + timecell->pos().x() + this->pos().x();
+    int height =  this->pos().y()+  ui->widget_timeaxis->pos().y() + ui->widget_timeaxis->height();
+
+    m_pTimeSelector->move(width, height);
     m_pTimeSelector->setDateTime(timecell->pos().x(), timecell->width(),ui->widget_timeaxis->width());
     m_pTimeSelector->show();
 }
 
-void TimelinePlugin::getCanMoveRange(QWidget *widget, int current_position, WidgetInfo &range)
+bool TimelinePlugin::getCanMoveRange(QWidget *widget, int current_position, WidgetInfo &range)
 {
     range.minlength = 0;
     range.maxlength = ui->widget_timeaxis->width();
 
-    int count = m_listTimeCell .count();
+    int count = m_listTimeCell .count();   
 
     for (int i=0; i< count; ++i) {
         QWidget *judge_widget = m_listTimeCell.at(i);
@@ -315,18 +389,21 @@ void TimelinePlugin::getCanMoveRange(QWidget *widget, int current_position, Widg
             int judge_start_point = judge_widget->pos().x();
             int judge_end_point = judge_start_point + judge_widget->width();
 
+            if( current_position >= judge_start_point &&  current_position<= judge_end_point)
+                return false;
+
             if (current_position >= judge_end_point && judge_end_point >= range.minlength) {
                 range.minlength = judge_end_point;
                 continue;
             }
 
-            if(current_position <= judge_start_point && judge_start_point <= range.maxlength)
- {
+            if(current_position <= judge_start_point && judge_start_point <= range.maxlength) {
                 range.maxlength = judge_start_point;
                 continue;
             }
         }
     }
+    return true;
 }
 
 void TimelinePlugin::getDateTime(int start_position, int width, QTime &start_time, QTime &end_time)
@@ -370,4 +447,19 @@ bool TimelinePlugin::getWidgetStartpositionAndWidth(const QTime start_time, cons
     start_position = count_start_m * ui->widget_timeaxis->width() /1440;
 
     return true;
+}
+
+void TimelinePlugin::on_rb_red_clicked()
+{
+    m_createWidgetColor = "rgb(255,0,0)";
+}
+
+void TimelinePlugin::on_rb_green_clicked()
+{
+    m_createWidgetColor = "rgb(0,255,0)";
+}
+
+void TimelinePlugin::on_rb_blue_clicked()
+{
+    m_createWidgetColor = "rgb(0,0,255)";
 }

@@ -15,8 +15,16 @@ public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
 
+
+private slots:
+    void on_ptn_show_clicked();
+    void on_ptn_add_clicked();
+
 private:
     Ui::MainWindow *ui;
+
+private:
+    QString getTimeCellColor(QString color);
 };
 
 #endif // MAINWINDOW_H

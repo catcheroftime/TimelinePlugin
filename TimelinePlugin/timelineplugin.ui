@@ -7,25 +7,25 @@
     <x>0</x>
     <y>0</y>
     <width>738</width>
-    <height>60</height>
+    <height>108</height>
    </rect>
   </property>
   <property name="minimumSize">
    <size>
     <width>738</width>
-    <height>42</height>
+    <height>0</height>
    </size>
   </property>
   <property name="maximumSize">
    <size>
     <width>738</width>
-    <height>60</height>
+    <height>16777215</height>
    </size>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout">
+  <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0">
    <property name="spacing">
     <number>0</number>
    </property>
@@ -36,33 +36,89 @@
     <number>0</number>
    </property>
    <item>
-    <widget class="QWidget" name="widget_graduation" native="true">
-     <property name="minimumSize">
-      <size>
-       <width>0</width>
-       <height>20</height>
-      </size>
-     </property>
+    <widget class="QWidget" name="widget" native="true">
+     <layout class="QHBoxLayout" name="horizontalLayout">
+      <item>
+       <spacer name="horizontalSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>576</width>
+          <height>18</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QRadioButton" name="rb_red">
+        <property name="text">
+         <string>红</string>
+        </property>
+        <attribute name="buttonGroup">
+         <string notr="true">btnGroup_color</string>
+        </attribute>
+       </widget>
+      </item>
+      <item>
+       <widget class="QRadioButton" name="rb_green">
+        <property name="text">
+         <string>绿</string>
+        </property>
+        <attribute name="buttonGroup">
+         <string notr="true">btnGroup_color</string>
+        </attribute>
+       </widget>
+      </item>
+      <item>
+       <widget class="QRadioButton" name="rb_blue">
+        <property name="text">
+         <string>蓝</string>
+        </property>
+        <attribute name="buttonGroup">
+         <string notr="true">btnGroup_color</string>
+        </attribute>
+       </widget>
+      </item>
+     </layout>
     </widget>
    </item>
    <item>
-    <widget class="QWidget" name="widget_timeaxis" native="true">
-     <property name="minimumSize">
-      <size>
-       <width>720</width>
-       <height>16</height>
-      </size>
-     </property>
-     <property name="maximumSize">
-      <size>
-       <width>720</width>
-       <height>16</height>
-      </size>
-     </property>
-    </widget>
+    <layout class="QVBoxLayout" name="verticalLayout_2">
+     <item>
+      <widget class="QWidget" name="widget_graduation" native="true">
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>20</height>
+        </size>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QWidget" name="widget_timeaxis" native="true">
+       <property name="minimumSize">
+        <size>
+         <width>720</width>
+         <height>16</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>720</width>
+         <height>16</height>
+        </size>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </item>
   </layout>
  </widget>
  <resources/>
  <connections/>
+ <buttongroups>
+  <buttongroup name="btnGroup_color"/>
+ </buttongroups>
 </ui>

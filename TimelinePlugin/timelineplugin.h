@@ -23,6 +23,7 @@ class QDESIGNER_WIDGET_EXPORT  TimelinePlugin : public QWidget
         int width;
         int minlength;
         int maxlength;
+        QString color;
     };
 
     enum StretchDirction
@@ -33,16 +34,29 @@ class QDESIGNER_WIDGET_EXPORT  TimelinePlugin : public QWidget
     };
 
 public:
+    struct TimecellDetail
+    {
+        QTime start_time;
+        QTime end_time;
+        QString color;
+    };
+
+public:
     explicit TimelinePlugin(QWidget *parent = 0);
     ~TimelinePlugin();
 
-    void deleteTimecell();
+    QList<TimecellDetail> getTimeCell();
+    void setTimeCell(const TimecellDetail &detail);
 protected:
     bool eventFilter(QObject *target, QEvent *event);
     void paintEvent(QPaintEvent *);
 
 private slots:
     void slotChangeTimeWidgetLength(QTime start_time, QTime end_time);
+
+    void on_rb_red_clicked();
+    void on_rb_green_clicked();
+    void on_rb_blue_clicked();
 
 private:
     Ui::TimelinePlugin *ui;
@@ -61,11 +75,15 @@ private:
     StretchDirction m_direc;
     bool m_bmove;
 
+    QString m_createWidgetColor;
+
 private:
-    void showSettingTimeWidget(QMouseEvent *mousemove, QWidget *timecell);
-    void getCanMoveRange(QWidget *widget, int current_position, WidgetInfo &range);
+    void deleteTimecell();
+    void showTimeSelector(QMouseEvent *mousemove, QWidget *timecell);
+    bool getCanMoveRange(QWidget *widget, int current_position, WidgetInfo &range);
     void getDateTime(int start_position, int width, QTime &start_time, QTime &end_time);
     bool getWidgetStartpositionAndWidth(const QTime start_time, const QTime end_time, int &width, int &start_position);
+
 };
 
 #endif // TIMELINEPLUGIN_H
