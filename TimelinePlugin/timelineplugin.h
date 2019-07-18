@@ -80,9 +80,11 @@ private:
 private:
     void deleteTimecell();
     void showTimeSelector(QMouseEvent *mousemove, QWidget *timecell);
-    bool getCanMoveRange(QWidget *widget, int current_position, WidgetInfo &range);
+    bool validityOfStartposition(int current_position);
+    void getCanMoveRange(QWidget *widget, int current_position, WidgetInfo &range);
     void getDateTime(int start_position, int width, QTime &start_time, QTime &end_time);
     bool getWidgetStartpositionAndWidth(const QTime start_time, const QTime end_time, int &width, int &start_position);
+
 
 };
 

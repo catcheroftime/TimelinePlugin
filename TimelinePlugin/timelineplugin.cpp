@@ -72,26 +72,35 @@ void TimelinePlugin::setTimeCell(const TimelinePlugin::TimecellDetail &detail)
 
     WidgetInfo range;
     range.color = detail.color;
-    bool invalid = getCanMoveRange(NULL, start_position, range);
 
-    if (invalid && range.maxlength >= width + start_position && start_position >= range.minlength) {
-        QWidget *timecell = new QWidget(ui->widget_timeaxis);
-        timecell->resize(width, this->height());
-        timecell->move(start_position, 0);
-        timecell->show();
-        QString background = QString("background-color:") +detail.color;
-        timecell->setStyleSheet(background);
-        timecell->installEventFilter(this);
-        timecell->setMouseTracking(true);
+    bool invalid = validityOfStartposition(start_position);
+    if (invalid) {
+        getCanMoveRange(NULL, start_position, range);
+        if (invalid && range.maxlength >= width + start_position && start_position >= range.minlength) {
+            QWidget *timecell = new QWidget(ui->widget_timeaxis);
+            timecell->resize(width, this->height());
+            timecell->move(start_position, 0);
+            timecell->show();
+            QString background = QString("background-color:") +detail.color;
+            timecell->setStyleSheet(background);
+            timecell->installEventFilter(this);
+            timecell->setMouseTracking(true);
 
 
-        m_listTimeCell.append(timecell);
-        m_mapWidgetInfos[timecell] = range;
+            m_listTimeCell.append(timecell);
+            m_mapWidgetInfos[timecell] = range;
+        } else {
+            QString title = QString("新添加的 ") + starttime.toString("hh:mm") +QString("-") + endtime.toString("hh:mm") + QString(" 时间段和已有的时间段存在冲突！！");
+            QMessageBox::information(this, "错误", title);
+            return;
+        }
     } else {
         QString title = QString("新添加的 ") + starttime.toString("hh:mm") +QString("-") + endtime.toString("hh:mm") + QString(" 时间段和已有的时间段存在冲突！！");
         QMessageBox::information(this, "错误", title);
         return;
     }
+
+
 }
 
 void TimelinePlugin::deleteTimecell()
@@ -262,7 +271,7 @@ bool TimelinePlugin::eventFilter(QObject *target, QEvent *event)
                 if (m_bmove) {
                     this->setCursor(Qt::ClosedHandCursor);
                     int move_length = mouse_golbalX - m_timecell_pressmouseGlobalX + origin_position;
-                    if (origin_info.maxlength >= move_length + object->width() && origin_info.minlength <= move_length) {
+                    if (origin_info.maxlength > move_length + object->width() && origin_info.minlength < move_length) {
                         object->move(move_length, 0);
                         showTimeSelector(mousemove, object);
                     }
@@ -374,7 +383,24 @@ void TimelinePlugin::showTimeSelector(QMouseEvent *mousemove, QWidget *timecell)
     m_pTimeSelector->show();
 }
 
-bool TimelinePlugin::getCanMoveRange(QWidget *widget, int current_position, WidgetInfo &range)
+bool TimelinePlugin::validityOfStartposition(int current_position)
+{
+    int count = m_listTimeCell .count();
+
+    for (int i=0; i< count; ++i) {
+        QWidget *judge_widget = m_listTimeCell.at(i);
+
+        int judge_start_point = judge_widget->pos().x();
+        int judge_end_point = judge_start_point + judge_widget->width();
+        if( current_position >= judge_start_point &&  current_position<= judge_end_point) {
+
+            return false;
+        }
+    }
+    return true;
+}
+
+void TimelinePlugin::getCanMoveRange(QWidget *widget, int current_position, WidgetInfo &range)
 {
     range.minlength = 0;
     range.maxlength = ui->widget_timeaxis->width();
@@ -389,9 +415,6 @@ bool TimelinePlugin::getCanMoveRange(QWidget *widget, int current_position, Widg
             int judge_start_point = judge_widget->pos().x();
             int judge_end_point = judge_start_point + judge_widget->width();
 
-            if( current_position >= judge_start_point &&  current_position<= judge_end_point)
-                return false;
-
             if (current_position >= judge_end_point && judge_end_point >= range.minlength) {
                 range.minlength = judge_end_point;
                 continue;
@@ -403,7 +426,6 @@ bool TimelinePlugin::getCanMoveRange(QWidget *widget, int current_position, Widg
             }
         }
     }
-    return true;
 }
 
 void TimelinePlugin::getDateTime(int start_position, int width, QTime &start_time, QTime &end_time)
