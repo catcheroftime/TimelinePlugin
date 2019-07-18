@@ -271,7 +271,7 @@ bool TimelinePlugin::eventFilter(QObject *target, QEvent *event)
                 if (m_bmove) {
                     this->setCursor(Qt::ClosedHandCursor);
                     int move_length = mouse_golbalX - m_timecell_pressmouseGlobalX + origin_position;
-                    if (origin_info.maxlength > move_length + object->width() && origin_info.minlength < move_length) {
+                    if (origin_info.maxlength >= move_length + object->width() && origin_info.minlength <= move_length) {
                         object->move(move_length, 0);
                         showTimeSelector(mousemove, object);
                     }
