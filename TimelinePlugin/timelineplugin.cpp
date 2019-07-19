@@ -26,9 +26,6 @@ TimelinePlugin::TimelinePlugin(QWidget *parent) :
     m_pTimeSelector->hide();
 
     ui->rb_red->setChecked(true);
-
-
-    ui->widget_timeaxis->setStyleSheet("background-color:qlineargradient(x1:0, y1:0, x2:0, y2:1,stop:0 rgb(120, 120, 120), stop:1 rgb(140, 140, 140));");
     ui->widget_timeaxis->installEventFilter(this);
 
     connect(m_pTimeSelector, &TimeSelector::sigChangeTime, this, &TimelinePlugin::slotChangeTimeWidgetLength);
@@ -86,7 +83,6 @@ void TimelinePlugin::setTimeCell(const TimelinePlugin::TimecellDetail &detail)
             timecell->installEventFilter(this);
             timecell->setMouseTracking(true);
 
-
             m_listTimeCell.append(timecell);
             m_mapWidgetInfos[timecell] = range;
         } else {
@@ -99,8 +95,6 @@ void TimelinePlugin::setTimeCell(const TimelinePlugin::TimecellDetail &detail)
         QMessageBox::information(this, "错误", title);
         return;
     }
-
-
 }
 
 void TimelinePlugin::deleteTimecell()
@@ -281,7 +275,6 @@ bool TimelinePlugin::eventFilter(QObject *target, QEvent *event)
             }
 
             if (m_direc == RIGHT) {
-
                 if (origin_info.maxlength >= mouseTothis && mouseTothis >= origin_position) {
                     int current_widget = mouseTothis - origin_position;
                     object->resize(current_widget, this->height() );
@@ -326,30 +319,26 @@ void TimelinePlugin::paintEvent(QPaintEvent *)
 
     int start_position = ui->widget_graduation->pos().x();
     int height = ui->widget_graduation->pos().y() + ui->widget_graduation->height()-1;
-    int width = ui->widget_timeaxis->width();
+    int width = ui->widget_graduation->width();
 
     QPainter painter(this);
     QPen hor_pen(Qt::black, 2);
     painter.setPen(hor_pen);
     painter.drawLine(start_position,height,width+start_position,height);
 
-    int scale = ui->widget_graduation->width() / 24;
-
     QPen ver_pen(Qt::black, 1);
     painter.setPen(ver_pen);
-
     QFont font("宋体", 8);
     painter.setFont(font);
 
+    int scale = ui->widget_graduation->width() / 24;
     for (int i = 0; i<=24 ; ++i ) {
         int x = i * scale;
         painter.drawLine(x+start_position, height - 5, x+start_position , height);
 
         int remainder = i%2 ;
-
         if (remainder == 0)
             painter.drawText(x+start_position-3,height - 8, QString::number(i));
-
     }
 }
 
@@ -442,8 +431,8 @@ void TimelinePlugin::getDateTime(int start_position, int width, QTime &start_tim
     double end_h = end_count_second*24;
     double end_second = end_count_second*24*60 - (int)end_h*60 ;
 
-    if ((int)end_second == 0) {
-        QTime etime{(int)end_h-1,59};
+    if ((int)end_second == 0 && (int)end_h==24) {
+        QTime etime{23,59};
         end_time = etime;
     } else {
         QTime etime{(int)end_h,(int)end_second};

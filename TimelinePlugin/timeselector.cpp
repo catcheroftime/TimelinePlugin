@@ -1,6 +1,8 @@
 #include "timeselector.h"
 #include "ui_timeselector.h"
 
+#include <QDebug>
+
 TimeSelector::TimeSelector(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::TimeSelector)
@@ -17,17 +19,17 @@ void TimeSelector::setDateTime(int start_position, int width, int parent_width)
 {
     double start_count_second = (double)start_position / (double) parent_width;
     double start_h = start_count_second*24;
-    double start_second = start_count_second*24*60 - (int)start_h*60;
+    double start_second = (start_count_second*24-(int)start_h) * 60;
 
     QTime start_time{(int)start_h,(int)start_second};
     ui->timeEdit_starttime->setTime(start_time);
 
     double end_count_second = ((double)start_position+(double)width )/ (double) parent_width;
     double end_h = end_count_second*24;
-    double end_second = end_count_second*24*60 - (int)end_h*60 ;
+    double end_second = (end_count_second*24-(int)end_h)*60;
 
-    if ((int)end_second == 0) {
-        QTime end_time{(int)end_h-1,59};
+    if ((int)end_second == 0 && (int)end_h==24) {
+        QTime end_time{23,59};
         ui->timeEdit_endtime->setTime(end_time);
     } else {
         QTime end_time{(int)end_h,(int)end_second};
